@@ -49,7 +49,7 @@ export const RARITY_STYLE: Record<Rarity, { bg: string; text: string; border: st
 export const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string; label: string }> = {
   pending: { bg: '#422006', text: '#fbbf24', label: 'Na čekanju' },
   processing: { bg: '#0f2044', text: '#60a5fa', label: 'U obradi' },
-  shipped: { bg: '#1c1003', text: '#fb923c', label: 'Poslano' },
+  shipped: { bg: '#001a2e', text: '#00f5ff', label: 'Poslano' },
   completed: { bg: '#052e16', text: '#4ade80', label: 'Završeno' },
   cancelled: { bg: '#2d0000', text: '#f87171', label: 'Otkazano' },
 };
