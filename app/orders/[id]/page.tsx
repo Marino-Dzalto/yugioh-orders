@@ -3,7 +3,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { getOrder, saveOrder, deleteOrder } from '@/lib/store';
+import { fetchOrder, updateOrder, deleteOrderApi } from '@/lib/api';
 import {
   Order,
   OrderStatus,
@@ -20,16 +20,17 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const { id } = use(params);
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    const found = getOrder(id);
-    setOrder(found ?? null);
-    setMounted(true);
+    fetchOrder(id)
+      .then(setOrder)
+      .finally(() => setLoading(false));
   }, [id]);
 
-  if (!mounted) {
+  if (loading) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#0a0a12' }}>
         <Navbar />
@@ -47,22 +48,22 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
         <div style={{ textAlign: 'center', paddingTop: '4rem', color: '#94a3b8' }}>
           <p style={{ fontSize: '2rem' }}>🔍</p>
           <p>Narudžba nije pronađena</p>
-          <Link href="/" style={{ color: '#8b5cf6', textDecoration: 'none' }}>
-            ← Natrag
-          </Link>
+          <Link href="/" style={{ color: '#8b5cf6', textDecoration: 'none' }}>← Natrag</Link>
         </div>
       </div>
     );
   }
 
-  const handleStatusChange = (newStatus: OrderStatus) => {
+  const handleStatusChange = async (newStatus: OrderStatus) => {
+    setSaving(true);
     const updated = { ...order, status: newStatus };
-    saveOrder(updated);
+    await updateOrder(updated);
     setOrder(updated);
+    setSaving(false);
   };
 
-  const handleDelete = () => {
-    deleteOrder(order.id);
+  const handleDelete = async () => {
+    await deleteOrderApi(order.id);
     router.push('/');
   };
 
@@ -70,7 +71,6 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const total = calcOrderTotal(order);
   const status = STATUS_STYLE[order.status];
 
-  // Group cards by rarity
   const rarityOrder: Rarity[] = [
     'OVERFRAME STARLIGHT RARE',
     'OVERFRAME ULTRA RARE',
@@ -101,23 +101,14 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
             gap: '1rem',
           }}
         >
-          <Link
-            href="/"
-            style={{
-              color: '#94a3b8',
-              textDecoration: 'none',
-              fontSize: '0.9rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
+          <Link href="/" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '0.9rem' }}>
             ← Natrag na listu
           </Link>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <select
               value={order.status}
               onChange={(e) => handleStatusChange(e.target.value as OrderStatus)}
+              disabled={saving}
               style={{
                 padding: '6px 12px',
                 backgroundColor: status.bg,
@@ -128,6 +119,7 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
                 fontWeight: 600,
                 cursor: 'pointer',
                 outline: 'none',
+                opacity: saving ? 0.6 : 1,
               }}
             >
               {ALL_STATUSES.map((s) => (
@@ -189,13 +181,7 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
 
         {/* Customer info */}
         <Section title="Kupac">
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '1rem',
-            }}
-          >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             <InfoField label="Ime i prezime" value={order.customer.name} />
             <InfoField label="Telefon" value={order.customer.phone} />
             <InfoField label="Email" value={order.customer.email} />
@@ -228,15 +214,7 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
                     {rarityTotal.toFixed(2)}€
                   </span>
                 </div>
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    backgroundColor: '#0e0e1c',
-                    borderRadius: '0 0 8px 8px',
-                    overflow: 'hidden',
-                  }}
-                >
+                <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#0e0e1c', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #1e1e38' }}>
                       <th style={thStyle}>Karta</th>
@@ -247,19 +225,10 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
                   </thead>
                   <tbody>
                     {cards.map((card, i) => (
-                      <tr
-                        key={i}
-                        style={{
-                          borderBottom: i < cards.length - 1 ? '1px solid #16162a' : 'none',
-                        }}
-                      >
+                      <tr key={i} style={{ borderBottom: i < cards.length - 1 ? '1px solid #16162a' : 'none' }}>
                         <td style={tdStyle}>{card.name}</td>
-                        <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8' }}>
-                          ×{card.quantity}
-                        </td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: '#94a3b8' }}>
-                          {card.price.toFixed(2)}€
-                        </td>
+                        <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8' }}>×{card.quantity}</td>
+                        <td style={{ ...tdStyle, textAlign: 'right', color: '#94a3b8' }}>{card.price.toFixed(2)}€</td>
                         <td style={{ ...tdStyle, textAlign: 'right', color: '#e2e8f0', fontWeight: 600 }}>
                           {(card.quantity * card.price).toFixed(2)}€
                         </td>
@@ -276,35 +245,20 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
         <Section title="Iznos">
           <div style={{ maxWidth: '300px', marginLeft: 'auto' }}>
             <TotalRow label="Karte" value={`${subtotal.toFixed(2)}€`} />
-            <TotalRow
-              label={`Dostava (${order.shippingMethod})`}
-              value={`${order.shippingCost.toFixed(2)}€`}
-            />
-            <div
-              style={{
-                borderTop: '1px solid #1e1e38',
-                marginTop: '8px',
-                paddingTop: '8px',
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}
-            >
+            <TotalRow label={`Dostava (${order.shippingMethod})`} value={`${order.shippingCost.toFixed(2)}€`} />
+            <div style={{ borderTop: '1px solid #1e1e38', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '1.1rem' }}>Ukupno</span>
-              <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.25rem' }}>
-                {total.toFixed(2)}€
-              </span>
+              <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.25rem' }}>{total.toFixed(2)}€</span>
             </div>
           </div>
         </Section>
 
-        {/* Notes */}
         {order.notes && (
           <Section title="Napomene">
             <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6' }}>{order.notes}</p>
           </Section>
         )}
 
-        {/* Meta */}
         <p style={{ color: '#334155', fontSize: '0.75rem', textAlign: 'right', marginTop: '1rem' }}>
           ID: {order.id} · Datum: {order.date}
         </p>
@@ -315,25 +269,8 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        backgroundColor: '#12121e',
-        border: '1px solid #1e1e38',
-        borderRadius: '12px',
-        padding: '1.25rem',
-        marginBottom: '1.25rem',
-      }}
-    >
-      <h2
-        style={{
-          color: '#c084fc',
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          marginBottom: '1rem',
-        }}
-      >
+    <div style={{ backgroundColor: '#12121e', border: '1px solid #1e1e38', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+      <h2 style={{ color: '#c084fc', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1rem' }}>
         {title}
       </h2>
       {children}
@@ -359,17 +296,5 @@ function TotalRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const thStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  color: '#64748b',
-  fontSize: '0.75rem',
-  fontWeight: 600,
-  textAlign: 'left',
-  letterSpacing: '0.05em',
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '10px 12px',
-  color: '#cbd5e1',
-  fontSize: '0.875rem',
-};
+const thStyle: React.CSSProperties = { padding: '8px 12px', color: '#64748b', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', letterSpacing: '0.05em' };
+const tdStyle: React.CSSProperties = { padding: '10px 12px', color: '#cbd5e1', fontSize: '0.875rem' };

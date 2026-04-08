@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { getOrders } from '@/lib/store';
+import { fetchOrders } from '@/lib/api';
 import { Order, OrderStatus, STATUS_STYLE, calcOrderTotal } from '@/lib/types';
 
 const STATUSES: { key: OrderStatus | 'all'; label: string }[] = [
@@ -18,19 +18,33 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
   const [search, setSearch] = useState('');
-  const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    setOrders(getOrders());
-    setMounted(true);
+    fetchOrders()
+      .then(setOrders)
+      .catch(() => setError('Greška pri učitavanju narudžbi'))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (!mounted) {
+  if (loading) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#0a0a12' }}>
         <Navbar />
         <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '4rem' }}>
           <span style={{ color: '#94a3b8' }}>Učitavanje...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#0a0a12' }}>
+        <Navbar />
+        <div style={{ textAlign: 'center', paddingTop: '4rem', color: '#f87171' }}>
+          <p>{error}</p>
         </div>
       </div>
     );
@@ -131,7 +145,6 @@ export default function Dashboard() {
                   fontWeight: 500,
                   border: 'none',
                   cursor: 'pointer',
-                  transition: 'all 0.15s',
                   backgroundColor: filter === s.key ? '#7c3aed' : '#1e1e38',
                   color: filter === s.key ? '#fff' : '#94a3b8',
                 }}
@@ -198,7 +211,6 @@ function OrderRow({ order }: { order: Order }) {
           (e.currentTarget as HTMLDivElement).style.backgroundColor = '#12121e';
         }}
       >
-        {/* Customer info */}
         <div>
           <p style={{ fontWeight: 600, color: '#e2e8f0', marginBottom: '2px' }}>
             {order.customer.name}
@@ -207,22 +219,16 @@ function OrderRow({ order }: { order: Order }) {
             {order.customer.email} · {order.date}
           </p>
         </div>
-
-        {/* Card count */}
         <div style={{ textAlign: 'center' }}>
           <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '2px' }}>Karata</p>
           <p style={{ color: '#c084fc', fontWeight: 600 }}>{cardCount}</p>
         </div>
-
-        {/* Total */}
         <div style={{ textAlign: 'right' }}>
           <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '2px' }}>Ukupno</p>
           <p style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.1rem' }}>
             {total.toFixed(2)}€
           </p>
         </div>
-
-        {/* Status */}
         <div>
           <span
             style={{
