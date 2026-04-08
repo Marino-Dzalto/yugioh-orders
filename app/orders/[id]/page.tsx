@@ -72,12 +72,15 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
 
   // Group cards by rarity
   const rarityOrder: Rarity[] = [
-    'PRISMATIC SECRET RARE',
+    'OVERFRAME STARLIGHT RARE',
+    'OVERFRAME ULTRA RARE',
+    'STARLIGHT RARE',
+    'PLATINUM SECRET RARE',
+    'ULTIMATE RARE',
+    'COLLECTORS RARE',
     'SECRET RARE',
     'ULTRA RARE',
     'SUPER RARE',
-    'RARE',
-    'COMMON',
   ];
   const grouped = rarityOrder
     .map((r) => ({ rarity: r, cards: order.cards.filter((c) => c.rarity === r) }))

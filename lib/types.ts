@@ -1,10 +1,13 @@
 export type Rarity =
-  | 'COMMON'
-  | 'RARE'
   | 'SUPER RARE'
   | 'ULTRA RARE'
   | 'SECRET RARE'
-  | 'PRISMATIC SECRET RARE';
+  | 'COLLECTORS RARE'
+  | 'ULTIMATE RARE'
+  | 'PLATINUM SECRET RARE'
+  | 'STARLIGHT RARE'
+  | 'OVERFRAME ULTRA RARE'
+  | 'OVERFRAME STARLIGHT RARE';
 
 export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'completed' | 'cancelled';
 
@@ -32,12 +35,15 @@ export interface Order {
 }
 
 export const RARITY_STYLE: Record<Rarity, { bg: string; text: string; border: string }> = {
-  COMMON: { bg: '#1a1f2e', text: '#94a3b8', border: '#334155' },
-  RARE: { bg: '#0f2044', text: '#60a5fa', border: '#2563eb' },
   'SUPER RARE': { bg: '#1e0a3c', text: '#c084fc', border: '#7c3aed' },
   'ULTRA RARE': { bg: '#1f1000', text: '#fbbf24', border: '#d97706' },
   'SECRET RARE': { bg: '#002922', text: '#2dd4bf', border: '#0d9488' },
-  'PRISMATIC SECRET RARE': { bg: '#2d0033', text: '#f472b6', border: '#db2777' },
+  'COLLECTORS RARE': { bg: '#1a0a00', text: '#fb923c', border: '#ea580c' },
+  'ULTIMATE RARE': { bg: '#0a1a00', text: '#86efac', border: '#16a34a' },
+  'PLATINUM SECRET RARE': { bg: '#1a1a1a', text: '#e2e8f0', border: '#94a3b8' },
+  'STARLIGHT RARE': { bg: '#00001f', text: '#818cf8', border: '#6366f1' },
+  'OVERFRAME ULTRA RARE': { bg: '#2a1500', text: '#fde047', border: '#ca8a04' },
+  'OVERFRAME STARLIGHT RARE': { bg: '#10001f', text: '#e879f9', border: '#c026d3' },
 };
 
 export const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string; label: string }> = {

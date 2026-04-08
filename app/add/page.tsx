@@ -6,21 +6,27 @@ import { saveOrder, generateId } from '@/lib/store';
 import { CardItem, Rarity, Order } from '@/lib/types';
 
 const RARITIES: Rarity[] = [
-  'COMMON',
-  'RARE',
   'SUPER RARE',
   'ULTRA RARE',
   'SECRET RARE',
-  'PRISMATIC SECRET RARE',
+  'COLLECTORS RARE',
+  'ULTIMATE RARE',
+  'PLATINUM SECRET RARE',
+  'STARLIGHT RARE',
+  'OVERFRAME ULTRA RARE',
+  'OVERFRAME STARLIGHT RARE',
 ];
 
 const RARITY_COLORS: Record<Rarity, string> = {
-  COMMON: '#94a3b8',
-  RARE: '#60a5fa',
   'SUPER RARE': '#c084fc',
   'ULTRA RARE': '#fbbf24',
   'SECRET RARE': '#2dd4bf',
-  'PRISMATIC SECRET RARE': '#f472b6',
+  'COLLECTORS RARE': '#fb923c',
+  'ULTIMATE RARE': '#86efac',
+  'PLATINUM SECRET RARE': '#e2e8f0',
+  'STARLIGHT RARE': '#818cf8',
+  'OVERFRAME ULTRA RARE': '#fde047',
+  'OVERFRAME STARLIGHT RARE': '#e879f9',
 };
 
 const emptyCard = (): CardItem => ({
