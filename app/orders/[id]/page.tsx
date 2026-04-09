@@ -53,6 +53,9 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const [editCards, setEditCards] = useState(false);
   const [newCards, setNewCards] = useState<CardItem[]>([emptyCard()]);
   const [savingNewCards, setSavingNewCards] = useState(false);
+  const [editCustomer, setEditCustomer] = useState(false);
+  const [customerDraft, setCustomerDraft] = useState({ name: '', phone: '', email: '', address: '' });
+  const [savingCustomer, setSavingCustomer] = useState(false);
   const [discountInput, setDiscountInput] = useState('');
   const [savingDiscount, setSavingDiscount] = useState(false);
 
@@ -60,7 +63,10 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
     fetchOrder(id)
       .then((o) => {
         setOrder(o);
-        if (o) setDiscountInput(o.discount ? o.discount.toString() : '');
+        if (o) {
+          setDiscountInput(o.discount ? o.discount.toString() : '');
+          setCustomerDraft({ name: o.customer.name, phone: o.customer.phone, email: o.customer.email, address: o.customer.address });
+        }
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -100,6 +106,15 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const handleDelete = async () => {
     await deleteOrderApi(order.id);
     router.push('/');
+  };
+
+  const handleCustomerSave = async () => {
+    setSavingCustomer(true);
+    const updated = { ...order, customer: { ...customerDraft } };
+    await updateOrder(updated);
+    setOrder(updated);
+    setEditCustomer(false);
+    setSavingCustomer(false);
   };
 
   const handleAddCards = async () => {
@@ -252,14 +267,61 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
         </div>
 
         {/* Customer info */}
-        <Section title="Kupac">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <InfoField label="Ime i prezime" value={order.customer.name} />
-            <InfoField label="Telefon" value={order.customer.phone} />
-            <InfoField label="Email" value={order.customer.email} />
-            <InfoField label="Adresa" value={order.customer.address} />
+        <div style={{ backgroundColor: '#12121e', border: '1px solid #1e1e38', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ color: '#c084fc', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+              Kupac
+            </h2>
+            {!editCustomer ? (
+              <button
+                onClick={() => { setCustomerDraft({ name: order.customer.name, phone: order.customer.phone, email: order.customer.email, address: order.customer.address }); setEditCustomer(true); }}
+                style={{ padding: '4px 12px', backgroundColor: 'transparent', color: '#64748b', border: '1px solid #2d2d50', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+              >
+                Uredi
+              </button>
+            ) : (
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={handleCustomerSave}
+                  disabled={savingCustomer}
+                  style={{ padding: '4px 12px', backgroundColor: '#3b1f6e', color: savingCustomer ? '#64748b' : '#c084fc', border: '1px solid #5b21b6', borderRadius: '6px', cursor: savingCustomer ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                >
+                  {savingCustomer ? 'Sprema...' : 'Spremi'}
+                </button>
+                <button
+                  onClick={() => setEditCustomer(false)}
+                  style={{ padding: '4px 12px', backgroundColor: 'transparent', color: '#64748b', border: '1px solid #2d2d50', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
+                >
+                  Odustani
+                </button>
+              </div>
+            )}
           </div>
-        </Section>
+          {editCustomer ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              {(['name', 'phone', 'email', 'address'] as const).map((field) => (
+                <div key={field}>
+                  <label style={addLabelStyle}>
+                    {field === 'name' ? 'Ime i prezime' : field === 'phone' ? 'Telefon' : field === 'email' ? 'Email' : 'Adresa'}
+                  </label>
+                  <input
+                    value={customerDraft[field]}
+                    onChange={(e) => setCustomerDraft((prev) => ({ ...prev, [field]: e.target.value }))}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCustomerSave()}
+                    style={addInputStyle}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              <InfoField label="Ime i prezime" value={order.customer.name} />
+              <InfoField label="Telefon" value={order.customer.phone} />
+              <InfoField label="Email" value={order.customer.email} />
+              <InfoField label="Adresa" value={order.customer.address} />
+            </div>
+          )}
+        </div>
 
         {/* Cards grouped by rarity */}
         <div style={{ backgroundColor: '#12121e', border: '1px solid #1e1e38', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
