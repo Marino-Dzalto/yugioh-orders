@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [hideAmounts, setHideAmounts] = useState(false);
 
   useEffect(() => {
     fetchOrders()
@@ -74,13 +75,35 @@ export default function Dashboard() {
       value: orders.filter((o) => o.status === 'completed').length,
       color: '#4ade80',
     },
-    { label: 'Prihod', value: `${totalRevenue.toFixed(2)}€`, color: '#2dd4bf' },
+    { label: 'Prihod', value: hideAmounts ? 'XXX;XXX' : `${totalRevenue.toFixed(2)}€`, color: '#2dd4bf' },
   ];
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0a0a12' }}>
       <Navbar />
       <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 1rem' }}>
+        {/* Hide amounts toggle */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+          <button
+            onClick={() => setHideAmounts((v) => !v)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '7px 16px',
+              borderRadius: '8px',
+              border: '1px solid #1e1e38',
+              backgroundColor: '#16162a',
+              color: '#94a3b8',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            {hideAmounts ? '👁️ Prikaži iznose' : '🙈 Sakrij iznose'}
+          </button>
+        </div>
+
         {/* Stats */}
         <div
           style={{
@@ -173,7 +196,7 @@ export default function Dashboard() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {filtered.map((order) => (
-              <OrderRow key={order.id} order={order} />
+              <OrderRow key={order.id} order={order} hideAmounts={hideAmounts} />
             ))}
           </div>
         )}
@@ -182,7 +205,7 @@ export default function Dashboard() {
   );
 }
 
-function OrderRow({ order }: { order: Order }) {
+function OrderRow({ order, hideAmounts }: { order: Order; hideAmounts: boolean }) {
   const status = STATUS_STYLE[order.status];
   const total = calcOrderTotal(order);
   const cardCount = order.cards.reduce((s, c) => s + c.quantity, 0);
@@ -226,7 +249,7 @@ function OrderRow({ order }: { order: Order }) {
         <div style={{ textAlign: 'right' }}>
           <p style={{ color: '#94a3b8', fontSize: '0.75rem', marginBottom: '2px' }}>Ukupno</p>
           <p style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.1rem' }}>
-            {total.toFixed(2)}€
+            {hideAmounts ? 'XXX;XXX' : `${total.toFixed(2)}€`}
           </p>
         </div>
         <div>
