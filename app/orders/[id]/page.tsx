@@ -8,11 +8,38 @@ import {
   Order,
   OrderStatus,
   Rarity,
+  CardItem,
   RARITY_STYLE,
   STATUS_STYLE,
   calcCardsSubtotal,
   calcOrderTotal,
 } from '@/lib/types';
+
+const RARITIES: Rarity[] = [
+  'SUPER RARE',
+  'ULTRA RARE',
+  'SECRET RARE',
+  'COLLECTORS RARE',
+  'ULTIMATE RARE',
+  'PLATINUM SECRET RARE',
+  'STARLIGHT RARE',
+  'OVERFRAME ULTRA RARE',
+  'OVERFRAME STARLIGHT RARE',
+];
+
+const RARITY_COLORS: Record<Rarity, string> = {
+  'SUPER RARE': '#c084fc',
+  'ULTRA RARE': '#fbbf24',
+  'SECRET RARE': '#2dd4bf',
+  'COLLECTORS RARE': '#fb923c',
+  'ULTIMATE RARE': '#86efac',
+  'PLATINUM SECRET RARE': '#e2e8f0',
+  'STARLIGHT RARE': '#818cf8',
+  'OVERFRAME ULTRA RARE': '#fde047',
+  'OVERFRAME STARLIGHT RARE': '#e879f9',
+};
+
+const emptyCard = (): CardItem => ({ rarity: 'SUPER RARE', name: '', quantity: 1, price: 0 });
 
 const ALL_STATUSES: OrderStatus[] = ['pending', 'processing', 'shipped', 'completed', 'cancelled'];
 
@@ -24,6 +51,8 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [editCards, setEditCards] = useState(false);
+  const [newCards, setNewCards] = useState<CardItem[]>([emptyCard()]);
+  const [savingNewCards, setSavingNewCards] = useState(false);
   const [discountInput, setDiscountInput] = useState('');
   const [savingDiscount, setSavingDiscount] = useState(false);
 
@@ -71,6 +100,25 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const handleDelete = async () => {
     await deleteOrderApi(order.id);
     router.push('/');
+  };
+
+  const handleAddCards = async () => {
+    const valid = newCards.filter((c) => c.name.trim());
+    if (valid.length === 0) return;
+    setSavingNewCards(true);
+    const updated = { ...order, cards: [...order.cards, ...valid.map((c) => ({ ...c, quantity: Number(c.quantity), price: Number(c.price) }))] };
+    await updateOrder(updated);
+    setOrder(updated);
+    setNewCards([emptyCard()]);
+    setSavingNewCards(false);
+  };
+
+  const updateNewCard = (i: number, field: keyof CardItem, value: string | number) => {
+    setNewCards((prev) => {
+      const next = [...prev];
+      next[i] = { ...next[i], [field]: value };
+      return next;
+    });
   };
 
   const handleRemoveCard = async (cardIndex: number) => {
@@ -220,7 +268,7 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
               Karte
             </h2>
             <button
-              onClick={() => setEditCards((v) => !v)}
+              onClick={() => { setEditCards((v) => !v); setNewCards([emptyCard()]); }}
               style={{
                 padding: '4px 12px',
                 backgroundColor: editCards ? '#2d2d50' : 'transparent',
@@ -310,6 +358,82 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
               </div>
             );
           })}
+          {editCards && (
+            <div style={{ marginTop: '1rem', borderTop: '1px solid #1e1e38', paddingTop: '1rem' }}>
+              <p style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+                Dodaj karte
+              </p>
+              {newCards.map((card, i) => (
+                <div
+                  key={i}
+                  style={{
+                    backgroundColor: '#0e0e1c',
+                    border: '1px solid #1e1e38',
+                    borderRadius: '10px',
+                    padding: '12px',
+                    marginBottom: '8px',
+                    borderLeft: `3px solid ${RARITY_COLORS[card.rarity]}`,
+                  }}
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 170px 70px 80px auto', gap: '8px', alignItems: 'end' }}>
+                    <div>
+                      <label style={addLabelStyle}>Naziv karte</label>
+                      <input
+                        value={card.name}
+                        onChange={(e) => updateNewCard(i, 'name', e.target.value)}
+                        placeholder="Naziv karte"
+                        style={addInputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={addLabelStyle}>Raritet</label>
+                      <select
+                        value={card.rarity}
+                        onChange={(e) => updateNewCard(i, 'rarity', e.target.value as Rarity)}
+                        style={{ ...addInputStyle, color: RARITY_COLORS[card.rarity] }}
+                      >
+                        {RARITIES.map((r) => (
+                          <option key={r} value={r} style={{ color: RARITY_COLORS[r], backgroundColor: '#12121e' }}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={addLabelStyle}>Kom.</label>
+                      <input type="number" min={1} value={card.quantity} onChange={(e) => updateNewCard(i, 'quantity', Number(e.target.value))} style={addInputStyle} />
+                    </div>
+                    <div>
+                      <label style={addLabelStyle}>Cijena (€)</label>
+                      <input type="number" min={0} step={0.1} value={card.price} onChange={(e) => updateNewCard(i, 'price', Number(e.target.value))} style={addInputStyle} />
+                    </div>
+                    <div style={{ paddingBottom: '2px' }}>
+                      <button
+                        onClick={() => { if (newCards.length > 1) setNewCards((prev) => prev.filter((_, idx) => idx !== i)); }}
+                        disabled={newCards.length === 1}
+                        style={{ padding: '7px 9px', backgroundColor: '#1e1e38', color: newCards.length === 1 ? '#334155' : '#f87171', border: 'none', borderRadius: '6px', cursor: newCards.length === 1 ? 'not-allowed' : 'pointer', fontSize: '0.9rem' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <button
+                  onClick={() => setNewCards((prev) => [...prev, emptyCard()])}
+                  style={{ flex: 1, padding: '8px', backgroundColor: 'transparent', border: '1px dashed #2d2d50', borderRadius: '8px', color: '#8b5cf6', cursor: 'pointer', fontSize: '0.825rem', fontWeight: 600 }}
+                >
+                  + Dodaj još
+                </button>
+                <button
+                  onClick={handleAddCards}
+                  disabled={savingNewCards || newCards.every((c) => !c.name.trim())}
+                  style={{ padding: '8px 20px', backgroundColor: savingNewCards ? '#2d2d50' : '#3b1f6e', color: savingNewCards ? '#64748b' : '#c084fc', border: '1px solid #5b21b6', borderRadius: '8px', cursor: savingNewCards ? 'not-allowed' : 'pointer', fontSize: '0.825rem', fontWeight: 700 }}
+                >
+                  {savingNewCards ? 'Sprema...' : 'Spremi karte'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Totals */}
@@ -413,3 +537,5 @@ function TotalRow({ label, value }: { label: string; value: string }) {
 
 const thStyle: React.CSSProperties = { padding: '8px 12px', color: '#64748b', fontSize: '0.75rem', fontWeight: 600, textAlign: 'left', letterSpacing: '0.05em' };
 const tdStyle: React.CSSProperties = { padding: '10px 12px', color: '#cbd5e1', fontSize: '0.875rem' };
+const addLabelStyle: React.CSSProperties = { display: 'block', color: '#64748b', fontSize: '0.7rem', fontWeight: 600, marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.05em' };
+const addInputStyle: React.CSSProperties = { width: '100%', padding: '6px 10px', backgroundColor: '#16162a', border: '1px solid #1e1e38', borderRadius: '7px', color: '#e2e8f0', fontSize: '0.875rem', outline: 'none' };
