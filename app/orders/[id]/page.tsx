@@ -23,10 +23,16 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editCards, setEditCards] = useState(false);
+  const [discountInput, setDiscountInput] = useState('');
+  const [savingDiscount, setSavingDiscount] = useState(false);
 
   useEffect(() => {
     fetchOrder(id)
-      .then(setOrder)
+      .then((o) => {
+        setOrder(o);
+        if (o) setDiscountInput(o.discount ? o.discount.toString() : '');
+      })
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -67,8 +73,26 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
     router.push('/');
   };
 
+  const handleRemoveCard = async (cardIndex: number) => {
+    setSaving(true);
+    const updated = { ...order, cards: order.cards.filter((_, i) => i !== cardIndex) };
+    await updateOrder(updated);
+    setOrder(updated);
+    setSaving(false);
+  };
+
+  const handleDiscountSave = async () => {
+    setSavingDiscount(true);
+    const discount = parseFloat(discountInput) || 0;
+    const updated = { ...order, discount: discount > 0 ? discount : undefined };
+    await updateOrder(updated);
+    setOrder(updated);
+    setSavingDiscount(false);
+  };
+
   const subtotal = calcCardsSubtotal(order);
   const total = calcOrderTotal(order);
+  const discount = order.discount ?? 0;
   const status = STATUS_STYLE[order.status];
 
   const rarityOrder: Rarity[] = [
@@ -190,7 +214,27 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
         </Section>
 
         {/* Cards grouped by rarity */}
-        <Section title="Karte">
+        <div style={{ backgroundColor: '#12121e', border: '1px solid #1e1e38', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ color: '#c084fc', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+              Karte
+            </h2>
+            <button
+              onClick={() => setEditCards((v) => !v)}
+              style={{
+                padding: '4px 12px',
+                backgroundColor: editCards ? '#2d2d50' : 'transparent',
+                color: editCards ? '#a78bfa' : '#64748b',
+                border: `1px solid ${editCards ? '#4c4c8a' : '#2d2d50'}`,
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              {editCards ? 'Gotovo' : 'Uredi karte'}
+            </button>
+          </div>
           {grouped.map(({ rarity, cards }) => {
             const rs = RARITY_STYLE[rarity];
             const rarityTotal = cards.reduce((s, c) => s + c.quantity * c.price, 0);
@@ -221,31 +265,102 @@ export default function OrderDetail({ params }: { params: Promise<{ id: string }
                       <th style={{ ...thStyle, textAlign: 'center', width: '80px' }}>Kom.</th>
                       <th style={{ ...thStyle, textAlign: 'right', width: '80px' }}>Cijena</th>
                       <th style={{ ...thStyle, textAlign: 'right', width: '90px' }}>Ukupno</th>
+                      {editCards && <th style={{ ...thStyle, width: '40px' }} />}
                     </tr>
                   </thead>
                   <tbody>
-                    {cards.map((card, i) => (
-                      <tr key={i} style={{ borderBottom: i < cards.length - 1 ? '1px solid #16162a' : 'none' }}>
-                        <td style={tdStyle}>{card.name}</td>
-                        <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8' }}>×{card.quantity}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: '#94a3b8' }}>{card.price.toFixed(2)}€</td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: '#e2e8f0', fontWeight: 600 }}>
-                          {(card.quantity * card.price).toFixed(2)}€
-                        </td>
-                      </tr>
-                    ))}
+                    {cards.map((card, i) => {
+                      const globalIndex = order.cards.findIndex(
+                        (c) => c === card || (c.name === card.name && c.rarity === card.rarity && c.price === card.price && c.quantity === card.quantity)
+                      );
+                      return (
+                        <tr key={i} style={{ borderBottom: i < cards.length - 1 ? '1px solid #16162a' : 'none' }}>
+                          <td style={tdStyle}>{card.name}</td>
+                          <td style={{ ...tdStyle, textAlign: 'center', color: '#94a3b8' }}>×{card.quantity}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right', color: '#94a3b8' }}>{card.price.toFixed(2)}€</td>
+                          <td style={{ ...tdStyle, textAlign: 'right', color: '#e2e8f0', fontWeight: 600 }}>
+                            {(card.quantity * card.price).toFixed(2)}€
+                          </td>
+                          {editCards && (
+                            <td style={{ ...tdStyle, textAlign: 'center', padding: '6px 8px' }}>
+                              <button
+                                onClick={() => handleRemoveCard(globalIndex)}
+                                disabled={saving}
+                                style={{
+                                  padding: '2px 7px',
+                                  backgroundColor: 'transparent',
+                                  color: '#f87171',
+                                  border: '1px solid #3d1c1c',
+                                  borderRadius: '4px',
+                                  cursor: saving ? 'not-allowed' : 'pointer',
+                                  fontSize: '0.8rem',
+                                  lineHeight: '1.4',
+                                  opacity: saving ? 0.5 : 1,
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             );
           })}
-        </Section>
+        </div>
 
         {/* Totals */}
         <Section title="Iznos">
-          <div style={{ maxWidth: '300px', marginLeft: 'auto' }}>
+          <div style={{ maxWidth: '340px', marginLeft: 'auto' }}>
             <TotalRow label="Karte" value={`${subtotal.toFixed(2)}€`} />
             <TotalRow label={`Dostava (${order.shippingMethod})`} value={`${order.shippingCost.toFixed(2)}€`} />
+
+            {/* Discount row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>Popust (€)</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleDiscountSave()}
+                  placeholder="0.00"
+                  style={{
+                    width: '80px',
+                    padding: '4px 8px',
+                    backgroundColor: '#16162a',
+                    border: '1px solid #2d2d50',
+                    borderRadius: '6px',
+                    color: discount > 0 ? '#f87171' : '#64748b',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    textAlign: 'right',
+                  }}
+                />
+                <button
+                  onClick={handleDiscountSave}
+                  disabled={savingDiscount}
+                  style={{
+                    padding: '4px 10px',
+                    backgroundColor: '#1e1e38',
+                    color: savingDiscount ? '#64748b' : '#a78bfa',
+                    border: '1px solid #2d2d50',
+                    borderRadius: '6px',
+                    cursor: savingDiscount ? 'not-allowed' : 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {savingDiscount ? '...' : 'Spremi'}
+                </button>
+              </div>
+            </div>
+
             <div style={{ borderTop: '1px solid #1e1e38', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: '1.1rem' }}>Ukupno</span>
               <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.25rem' }}>{total.toFixed(2)}€</span>

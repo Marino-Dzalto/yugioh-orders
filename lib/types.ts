@@ -30,6 +30,7 @@ export interface Order {
   cards: CardItem[];
   shippingMethod: string;
   shippingCost: number;
+  discount?: number;
   status: OrderStatus;
   notes?: string;
 }
@@ -56,7 +57,8 @@ export const STATUS_STYLE: Record<OrderStatus, { bg: string; text: string; label
 
 export function calcOrderTotal(order: Order): number {
   const cardsTotal = order.cards.reduce((s, c) => s + c.quantity * c.price, 0);
-  return cardsTotal + order.shippingCost;
+  const discount = order.discount ?? 0;
+  return Math.max(0, cardsTotal + order.shippingCost - discount);
 }
 
 export function calcCardsSubtotal(order: Order): number {
